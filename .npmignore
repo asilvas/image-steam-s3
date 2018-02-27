@@ -1,0 +1,29 @@
+# pre-compiled code
+src
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# test stuff
+test
+coverage
+
+# Dependency directories
+node_modules
+jspm_packages
+
+# npm stuff
+.npm
+.npmignore
+.npmrc
+package-lock.json
+
+# editors
+.idea

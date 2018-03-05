@@ -47,12 +47,12 @@ export default class StorageS3 extends StorageBase
       return void cb(ex);
     }
   
-    var bufs = [];
+    const bufs = [];
     client.getFile(imagePath, function(err, res) {
       if (err) {
         return void cb(err);
       }
-      var info = Object.assign(
+      const info = Object.assign(
         { path: encodeURIComponent(originalPath), stepsHash: stepsHash },
         getMetaFromHeaders(res.headers)
       );
@@ -74,18 +74,10 @@ export default class StorageS3 extends StorageBase
   }
 
   store(opts, originalPath, stepsHash, image, cb) {
-    if (!stepsHash) {
-      return void cb(new Error('StorageS3: Cannot store an image over the original'));
-    }
-
     const options = this.getOptions(opts);
     const pathInfo = getPathInfo(originalPath, options);
     if (!pathInfo) {
       return void cb(new Error('Invalid S3 path'));
-    }
-  
-    if (!stepsHash) {
-      return void cb(new Error('Cannot store an image over the original'));
     }
   
     const imagePath = 'isteam/' + pathInfo.imagePath + '/' + stepsHash;
@@ -122,6 +114,35 @@ export default class StorageS3 extends StorageBase
     });
   }
 
+  touch(opts, originalPath, stepsHash, image, cb) {
+    const options = this.getOptions(opts);
+    const pathInfo = getPathInfo(originalPath, options);
+    if (!pathInfo) {
+      return void cb(new Error('Invalid S3 path'));
+    }
+  
+    const imagePath = 'isteam/' + pathInfo.imagePath + '/' + stepsHash;
+  
+    image.info.stepsHash = stepsHash;
+  
+    let client;
+    try {
+      client = getClient(pathInfo.bucket, options);
+    } catch (ex) {
+      return void cb(ex);
+    }
+
+    // MUST inform S3 of REPLACE, otherwise will fail with 400 as the default is COPY
+    client.copyFile(imagePath, imagePath, { 'x-amz-metadata-directive': 'REPLACE' }, (err, res) => {
+      if (err) {
+        return void cb(err);
+      }
+
+      res.resume();
+      cb();
+    });
+  }
+  
   deleteCache(opts, originalPath, cb) {
     const options = this.getOptions(opts);
     const pathInfo = getPathInfo(originalPath, options);
@@ -187,8 +208,8 @@ function getClient(bucket, opts) {
 };
 
 function getPathInfo(filePath, options) {
-  var firstSlash = filePath.indexOf('/');
-  var isBucketInPath = !options.bucket;
+  const firstSlash = filePath.indexOf('/');
+  const isBucketInPath = !options.bucket;
   if (firstSlash < 0 && isBucketInPath) {
     return null;
   }
@@ -200,18 +221,23 @@ function getPathInfo(filePath, options) {
 }
 
 function getMetaFromHeaders(headers) {
-  var info = {};
+  let info = {};
 
-  var header = headers['x-amz-meta-isteam'];
+  const header = headers['x-amz-meta-isteam'];
   if (header) {
     info = JSON.parse(header);
+  }
+
+  const lastModified = headers['last-modified'];
+  if (lastModified) {
+    info.lastModified = new Date(lastModified);
   }
 
   return info;
 }
 
 function getHeadersFromMeta(info) {
-  var headers = {
+  const headers = {
     'x-amz-meta-isteam': JSON.stringify(info)
   };
 

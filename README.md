@@ -1,4 +1,4 @@
-# image-steam-blobby
+# image-steam-s3
 S3 client for [Image Steam](https://github.com/asilvas/node-image-steam).
 
 
